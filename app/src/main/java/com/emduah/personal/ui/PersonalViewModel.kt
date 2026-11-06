@@ -99,8 +99,8 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
                 store.saveCurrent(p.screen, store.current(p.screen).copy(position = 0, sequenceId = 0))
             }
             store.saveProfile(saved)
-            RotationScheduler.schedule(getApplication(), saved)
             if (saved.enabled) RotationScheduler.next(getApplication(), saved)
+            else RotationScheduler.schedule(getApplication(), saved)
             notice = if (saved.enabled) "Rotation saved. First update queued; waiting for network and battery conditions." else "Settings saved. Rotation paused."
             true
         }.getOrElse { notice = it.message ?: "Unable to save settings."; false }

@@ -30,6 +30,8 @@ object RotationScheduler {
         if (p.enabled) WorkManager.getInstance(context).enqueueUniquePeriodicWork("rotation.${p.screen.key}", ExistingPeriodicWorkPolicy.UPDATE, request(p))
     }
     fun next(context: Context, p: Profile) {
+        // A manual update starts a fresh interval for this screen's automatic rotation.
+        schedule(context, p)
         val request = OneTimeWorkRequestBuilder<RotationWorker>().setConstraints(constraints(p))
             .setInputData(workDataOf("screen" to p.screen.key)).setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES).build()
         WorkManager.getInstance(context).enqueueUniqueWork("next.${p.screen.key}", ExistingWorkPolicy.KEEP, request)
