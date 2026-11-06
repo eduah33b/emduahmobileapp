@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.emduah.personal.data.*
@@ -49,11 +50,18 @@ import java.io.File
         ) { Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause preview" else "Play preview") }
         Column(Modifier.align(Alignment.BottomStart).padding(18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(media.name.ifBlank { "No wallpaper selected" }, color = Color.White.copy(alpha = .8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                RotationStatus.previewLine(timing.updated, if (playbackError == null) timing.status else "Preview unavailable"),
-                modifier = Modifier.semantics { contentDescription = listOf(timing.updated, playbackError ?: timing.status).filter { it.isNotBlank() }.joinToString(". ") },
-                color = Color.White.copy(alpha = .9f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    RotationStatus.elapsedLabel(timing.updated),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = timing.updated },
+                    color = Color.White.copy(alpha = .9f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    if (playbackError == null) RotationStatus.nextLabel(timing.status) else "Preview unavailable",
+                    modifier = Modifier.weight(2f).semantics { contentDescription = playbackError ?: timing.status },
+                    textAlign = TextAlign.End, color = Color.White.copy(alpha = .9f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

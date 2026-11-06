@@ -34,10 +34,12 @@ class RotationStatusTest {
         assertEquals("Checking schedule…", RotationStatus.nextUpdate(true, true, onlineWifi, RotationWork(), now))
         assertEquals("No update scheduled", RotationStatus.nextUpdate(true, true, onlineWifi, RotationWork(known = true), now))
     }
-    @Test fun compactPreviewKeepsTimingAndPauseReasonOnOneLine() {
-        assertEquals("15m ago · Next in 2m 04s", RotationStatus.previewLine("Updated 15m ago", "Next update in 2m 04s"))
-        assertEquals("15m ago · Paused · waiting for Wi-Fi", RotationStatus.previewLine("Updated 15m ago", "Paused · waiting for Wi-Fi"))
-        assertEquals("Paused", RotationStatus.previewLine("", "Paused"))
+    @Test fun compactLabelsKeepElapsedTimeAndNextStatusIndependent() {
+        assertEquals("15m ago", RotationStatus.elapsedLabel("Updated 15m ago"))
+        assertEquals("Next in 2m 04s", RotationStatus.nextLabel("Next update in 2m 04s"))
+        assertEquals("Paused · waiting for Wi-Fi", RotationStatus.nextLabel("Paused · waiting for Wi-Fi"))
+        assertEquals("Paused", RotationStatus.nextLabel("Paused"))
+        assertEquals("", RotationStatus.elapsedLabel(""))
     }
 
 }

@@ -20,7 +20,8 @@ internal data class RotationTiming(val updated: String, val status: String)
 @Composable internal fun rememberRotationTiming(profile: Profile, changedAt: Long): RotationTiming {
     val context = LocalContext.current.applicationContext
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val now by produceState(System.currentTimeMillis(), lifecycle) {
+    val now by produceState(System.currentTimeMillis(), lifecycle, profile.enabled, changedAt) {
+        if (!profile.enabled && changedAt <= 0) return@produceState
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) { value = System.currentTimeMillis(); delay(1000) }
         }

@@ -106,4 +106,31 @@ class AppNavigationTest {
         compose.onNodeWithText("Discard", substring = false).performClick()
         compose.onNodeWithText("A fresh view, at your pace.").assertIsDisplayed()
     }
+    @Test fun configureFromPlayingVideoRendersAndRemainsEditable() {
+        val file = File(context.cacheDir, "ui-test-preview.mp4")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("motion-test.mp4").use { source -> file.outputStream().use { source.copyTo(it) } }
+        try {
+            vm.store.saveProfile(com.emduah.personal.data.Profile(com.emduah.personal.data.Screen.HOME, motion = true, filters = """{"type":"video","sort":"random"}"""))
+            vm.store.saveCurrent(com.emduah.personal.data.Screen.HOME, com.emduah.personal.data.CurrentMedia(id = 1, name = "Test preview", type = "video", file = file.path))
+            show()
+            compose.onNodeWithText("Open wallpapers").performClick()
+            compose.onNodeWithContentDescription("Pause preview").assertIsDisplayed()
+            android.os.SystemClock.sleep(500)
+            compose.onNodeWithText("Configure").performScrollTo().performClick()
+            val title = compose.onNodeWithText("Choose your media").assertIsDisplayed()
+            val image = title.captureToImage().asAndroidBitmap()
+            var bright = 0
+            for (y in 0 until image.height) for (x in 0 until image.width) {
+                val pixel = image.getPixel(x, y)
+                if (android.graphics.Color.red(pixel) > 180 && android.graphics.Color.green(pixel) > 180 && android.graphics.Color.blue(pixel) > 180) bright++
+            }
+            org.junit.Assert.assertTrue("Editor text must be painted, not only present in semantics", bright > 20)
+            compose.onNodeWithText("Path", substring = false).performScrollTo().performTextInput("fixture -draft")
+            compose.onNodeWithText("fixture -draft").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Back").performClick()
+            compose.onNodeWithText("Discard", substring = false).performClick()
+            compose.onNodeWithText("A fresh view, at your pace.").assertIsDisplayed()
+        } finally { file.delete() }
+    }
+
 }

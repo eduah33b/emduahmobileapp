@@ -53,6 +53,7 @@ import com.emduah.personal.data.Screen
             var discard by rememberSaveable { mutableStateOf(false) }
             val stateHolder = rememberSaveableStateHolder()
             val editorKey = "editor-${screen.key}"
+            val contentKey = if (location.page == AppPage.EDITOR) editorKey else location.page.name
             fun leaveEditor() {
                 stateHolder.removeState(editorKey)
                 dirty = false
@@ -92,9 +93,10 @@ import com.emduah.personal.data.Screen
                     }
                 }
             ) { padding ->
+                // Do not reuse the video preview’s drawing/scroll subtree for another page.
                 if (!signedIn) {
                     SignInPage(vm, Modifier.padding(padding))
-                } else stateHolder.SaveableStateProvider(if (location.page == AppPage.EDITOR) editorKey else location.page.name) {
+                } else key(contentKey) { stateHolder.SaveableStateProvider(contentKey) {
                     Column(
                         Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -108,7 +110,7 @@ import com.emduah.personal.data.Screen
                             AppPage.SETTINGS -> SettingsPage(vm)
                         }
                     }
-                }
+                } }
             }
             if (discard) AlertDialog(
                 onDismissRequest = { discard = false },

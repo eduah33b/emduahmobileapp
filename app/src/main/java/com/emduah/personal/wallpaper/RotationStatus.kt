@@ -30,10 +30,8 @@ object RotationStatus {
         }
     }
 
-    fun previewLine(updated: String, status: String): String {
-        val next = if (status.startsWith("Next update in ")) "Next in " + status.removePrefix("Next update in ") else status
-        return listOf(updated.removePrefix("Updated "), next).filter { it.isNotBlank() }.joinToString(" · ")
-    }
+    fun elapsedLabel(updated: String): String = updated.removePrefix("Updated ")
+    fun nextLabel(status: String): String = if (status.startsWith("Next update in ")) "Next in " + status.removePrefix("Next update in ") else status
 
     private fun remaining(milliseconds: Long): String {
         val seconds = (milliseconds + 999) / 1000
