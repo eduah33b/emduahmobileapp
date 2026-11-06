@@ -46,6 +46,6 @@ import com.emduah.personal.wallpaper.WallpaperRouting
         separateLock -> "your home screen"
         else -> "both screens"
     }
-    Text("Activate live wallpaper for $destination to use videos. Android will ask you which screens to apply it to.", color = Muted, fontSize = 12.sp)
+    Text("Activate live wallpaper for $destination to use dynamic wallpapers and track lock-screen views. Android will ask you which screens to apply it to.", color = Muted, fontSize = 12.sp)
     OutlinedButton(onClick = activate, modifier = Modifier.fillMaxWidth()) { Text("Activate live wallpaper") }
 }

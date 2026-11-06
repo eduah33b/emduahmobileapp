@@ -18,7 +18,7 @@ import java.nio.FloatBuffer
 import kotlin.math.min
 
 /** One EGL producer for images and video; Canvas and decoder producers cannot share a Surface. */
-class WallpaperRenderer(surface: Surface, private val onError: (String) -> Unit) {
+class WallpaperRenderer(surface: Surface, private val onFramePresented: (String) -> Unit = {}, private val onError: (String) -> Unit) {
     private val thread = HandlerThread("VaultWallpaperGL").apply { start() }
     private val handler = Handler(thread.looper)
     @Volatile private var closed = false
@@ -42,6 +42,7 @@ class WallpaperRenderer(surface: Surface, private val onError: (String) -> Unit)
     private var maxTextureSize = 4096
     private var capSeconds = 60
     private var loaded: String? = null
+    private var frameFile = ""
     private var reported = false
     private val transform = FloatArray(16).apply { Matrix.setIdentityM(this, 0) }
     private val vertices = buffer(floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f))
@@ -81,13 +82,14 @@ class WallpaperRenderer(surface: Surface, private val onError: (String) -> Unit)
         capSeconds = cap
         setVisibleOnThread(isVisible)
         val key = file.path + ":" + type
-        if (key == loaded) return@safely
+        if (key == loaded) { if (visible) draw(); return@safely }
         loaded = key
         reported = false
         releaseMedia()
         video = type == "video"
         Matrix.setIdentityM(transform, 0)
         if (!file.isFile) { draw(); return@safely }
+        frameFile = file.path
         val texture = IntArray(1)
         GLES20.glGenTextures(1, texture, 0)
         textureId = texture[0]
@@ -179,6 +181,7 @@ class WallpaperRenderer(surface: Surface, private val onError: (String) -> Unit)
             GLES20.glDisableVertexAttribArray(uv)
         }
         check(EGL14.eglSwapBuffers(display, window)) { "The wallpaper surface could not display a frame." }
+        if (visible && hasFrame && textureId != 0) onFramePresented(frameFile)
     }
 
     private fun releaseMedia() {
@@ -191,6 +194,7 @@ class WallpaperRenderer(surface: Surface, private val onError: (String) -> Unit)
         if (textureId != 0) GLES20.glDeleteTextures(1, intArrayOf(textureId), 0)
         textureId = 0
         hasFrame = false
+        frameFile = ""
     }
     private fun safely(block: () -> Unit) {
         if (closed) return

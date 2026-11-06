@@ -27,8 +27,9 @@ class RendererDeviceTest {
         bitmap.recycle()
         instrumentation.context.assets.open("motion-test.mp4").use { source -> video.outputStream().use { source.copyTo(it) } }
         val errors = ConcurrentLinkedQueue<String>()
+        val presented = ConcurrentLinkedQueue<String>()
         val reader = ImageReader.newInstance(160, 240, PixelFormat.RGBA_8888, 3)
-        val renderer = WallpaperRenderer(reader.surface) { errors.add(it) }
+        val renderer = WallpaperRenderer(reader.surface, onFramePresented = { presented.add(it) }) { errors.add(it) }
         fun awaitColor(matches: (Int, Int, Int) -> Boolean): Boolean {
             val until = SystemClock.uptimeMillis() + 6000
             while (SystemClock.uptimeMillis() < until) {
@@ -50,8 +51,10 @@ class RendererDeviceTest {
             renderer.load(video, "video", 60, true)
             assertTrue("Video did not decode red frames", awaitColor { r, g, b -> r > 180 && g < 70 && b < 70 })
             assertTrue("Video did not advance to blue frames", awaitColor { r, g, b -> b > 180 && r < 70 && g < 70 })
+            assertTrue("Video frames must report the applied file", presented.contains(video.path))
             renderer.load(image, "image", 60, true)
             assertTrue("Image was not restored after video", awaitColor { r, g, b -> g > 200 && r < 40 && b < 40 })
+            assertTrue("Image frames must report the applied file", presented.contains(image.path))
             assertTrue(errors.joinToString(), errors.isEmpty())
         } finally {
             renderer.close()

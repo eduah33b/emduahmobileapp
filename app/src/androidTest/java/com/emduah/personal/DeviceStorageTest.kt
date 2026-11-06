@@ -15,6 +15,39 @@ import java.util.UUID
 @RunWith(AndroidJUnit4::class)
 class DeviceStorageTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun lockViewsPersistPerAppliedFileAndResetOnlyWhenMediaChanges() {
+        val name = "test-${UUID.randomUUID()}"
+        val store = VaultStore(context, name)
+        try {
+            store.setSeparateLock(true)
+            store.setMinimumLockViews(3)
+            val first = CurrentMedia(id = 42, file = "first")
+            store.saveCurrent(Screen.LOCK, first)
+            store.recordLockView("first")
+            store.recordLockView("first")
+            assertEquals(1, store.lockViews("first"))
+            assertEquals(1, VaultStore(context, name).lockViews("first"))
+            VaultStore(context, name).recordLockView("first") // Engine recreation is the same visit.
+            assertEquals(1, store.lockViews("first"))
+            store.endLockVisit()
+            store.recordLockView("first")
+            assertEquals(2, VaultStore(context, name).lockViews("first"))
+            assertEquals(3, VaultStore(context, name).minimumLockViews())
+            // A failed download/status update keeps the current media and its views.
+            store.saveCurrent(Screen.LOCK, first.copy(message = "Download failed"))
+            assertEquals(2, store.lockViews(store.current(Screen.LOCK).file))
+            // Even selecting the same catalog ID again creates a new applied file.
+            store.saveCurrent(Screen.LOCK, first.copy(file = "replacement"))
+            store.recordLockView("first") // Ignore late frames from the old renderer.
+            assertEquals(0, store.lockViews("replacement"))
+            store.recordLockView("replacement")
+            assertEquals(1, store.lockViews("replacement"))
+            store.setSeparateLock(false)
+            store.saveCurrent(Screen.HOME, first.copy(file = "shared"))
+            store.recordLockView("shared")
+            assertEquals(1, store.lockViews("shared"))
+        } finally { context.deleteSharedPreferences(name) }
+    }
     @Test fun credentialsAreEncryptedAndRoundTripThroughKeystore() {
         val name = "test-${UUID.randomUUID()}"
         val store = VaultStore(context, name)

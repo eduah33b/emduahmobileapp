@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.json.JSONObject
+import com.emduah.personal.wallpaper.LockScreenViews
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -42,6 +43,18 @@ class VaultStore(context: Context, name: String = "personal") {
     fun clearConnection() { prefs.edit().remove("token").remove("name").commit() }
     fun separateLock(): Boolean = prefs.getBoolean("separateLock", false)
     fun setSeparateLock(value: Boolean) { prefs.edit().putBoolean("separateLock", value).commit() }
+    fun minimumLockViews(): Int = prefs.getInt("minimumLockViews", LockScreenViews.DEFAULT_MINIMUM)
+    fun setMinimumLockViews(value: Int) {
+        require(value in 0..1000) { "Choose between 1 and 1000 views." }
+        prefs.edit().putInt("minimumLockViews", value).commit()
+    }
+    fun lockViews(file: String): Int = if (file.isNotBlank() && prefs.getString("lockViewedFile", "") == file) prefs.getInt("lockViewCount", 0) else 0
+    fun endLockVisit() { if (prefs.contains("lockVisitFile")) prefs.edit().remove("lockVisitFile").commit() }
+    fun recordLockView(file: String) {
+        val source = if (separateLock()) Screen.LOCK else Screen.HOME
+        if (file.isBlank() || current(source).file != file || prefs.getString("lockVisitFile", "") == file) return
+        prefs.edit().putString("lockViewedFile", file).putString("lockVisitFile", file).putInt("lockViewCount", (lockViews(file) + 1).coerceAtMost(1000)).commit()
+    }
     fun profile(screen: Screen): Profile {
         val j = JSONObject(prefs.getString("profile.${screen.key}", "{}")!!)
         return Profile(screen, j.optBoolean("enabled"), j.optLong("minutes", 20), j.optBoolean("wifiOnly", true), j.optBoolean("motion"), j.optString("filters", "{\"sort\":\"random\"}"), j.optString("revision", "initial"), j.optInt("maxDownloadMb", 120), j.optInt("videoSeconds", 60))

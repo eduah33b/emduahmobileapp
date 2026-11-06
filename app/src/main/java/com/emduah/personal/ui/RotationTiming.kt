@@ -17,7 +17,7 @@ import kotlinx.coroutines.isActive
 
 internal data class RotationTiming(val updated: String, val status: String)
 
-@Composable internal fun rememberRotationTiming(profile: Profile, changedAt: Long): RotationTiming {
+@Composable internal fun rememberRotationTiming(profile: Profile, changedAt: Long, lockViewsRemaining: Int = 0): RotationTiming {
     val context = LocalContext.current.applicationContext
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val now by produceState(System.currentTimeMillis(), lifecycle, profile.enabled, changedAt) {
@@ -42,5 +42,5 @@ internal data class RotationTiming(val updated: String, val status: String)
         }
     }
     val work by workFlow.collectAsStateWithLifecycle(initialValue = RotationWork())
-    return RotationTiming(RotationStatus.updatedAgo(changedAt, now), RotationStatus.nextUpdate(profile.enabled, profile.wifiOnly, environment, work, now))
+    return RotationTiming(RotationStatus.updatedAgo(changedAt, now), RotationStatus.nextUpdate(profile.enabled, profile.wifiOnly, environment, work, now, lockViewsRemaining))
 }

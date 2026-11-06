@@ -27,6 +27,8 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
         if (connection.token.isBlank()) return Result.failure()
         if (!RotationNetwork.allowed(applicationContext, p.wifiOnly)) return Result.retry()
         val old = store.current(screen)
+        val minimumViews = if (LockScreenViews.applies(screen, store.separateLock())) store.minimumLockViews() else 0
+        if (!inputData.getBoolean("manual", false) && LockScreenViews.waiting(minimumViews, old.file, store.lockViews(old.file))) return Result.success()
         val directory = File(applicationContext.filesDir, "wallpapers").apply { mkdirs() }
         // One worker across both screens. Remove leftovers from interrupted downloads.
         directory.listFiles()?.filter { it.name.endsWith(".part") }?.forEach { it.delete() }
@@ -46,6 +48,7 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
             )
             val useLive = if (screen == Screen.LOCK) lockUsesVault else homeUsesVault && (!shared || lockUsesVault)
             if (p.motion) require(useLive) { "Activate MediaVault motion for ${if (shared) "both screens" else screen.key} using the system wallpaper picker first." }
+            if (minimumViews > 0) require(useLive) { "Activate live wallpaper for the lock screen to count views, including images." }
             store.saveCurrent(screen, old.copy(message = "Finding your next wallpaper…"))
             val api = VaultApi(store)
             val selected = api.next(connection, p, old)
@@ -63,6 +66,9 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
                 !isStopped && networkAllowed
             }
             if (isStopped || store.profile(screen).revision != p.revision || (store.connection().sessionId != connection.sessionId || store.connection().baseUrl != connection.baseUrl)) return Result.success()
+            // Settings can change while downloading. Do not replace newly protected media.
+            if (!inputData.getBoolean("manual", false) && LockScreenViews.applies(screen, store.separateLock()) &&
+                LockScreenViews.waiting(store.minimumLockViews(), old.file, store.lockViews(old.file))) return Result.success()
             val currentFile = File(directory, "${screen.key}-${UUID.randomUUID()}.media")
             val metrics = applicationContext.resources.displayMetrics
             if (selected.type == "video") {

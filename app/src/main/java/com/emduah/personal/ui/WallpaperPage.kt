@@ -2,11 +2,15 @@ package com.emduah.personal.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.emduah.personal.data.Screen
+import com.emduah.personal.wallpaper.LockScreenViews
 
 @Composable internal fun WallpaperPage(vm: PersonalViewModel, screen: Screen, selectScreen: (Screen) -> Unit, onActivateMotion: () -> Unit, edit: () -> Unit) {
     Text("A fresh view, at your pace.", style = MaterialTheme.typography.bodyLarge, color = Muted)
@@ -17,7 +21,8 @@ import com.emduah.personal.data.Screen
     val source = if (inherited) Screen.HOME else screen
     val p = vm.profiles.getValue(source)
     val media = vm.current.getValue(source)
-    val timing = rememberRotationTiming(p, media.changedAt)
+    val remainingViews = if (LockScreenViews.applies(source, vm.separateLock) && media.file.isNotBlank()) (vm.minimumLockViews - vm.lockViewCount).coerceAtLeast(0) else 0
+    val timing = rememberRotationTiming(p, media.changedAt, remainingViews)
     WallpaperPreview(media, screen, p.videoSeconds, timing)
     if (screen == Screen.LOCK) CardBlock {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -27,6 +32,10 @@ import com.emduah.personal.data.Screen
             }
             Switch(vm.separateLock, vm::setLockOverride)
         }
+    }
+    if (screen == Screen.LOCK) LockViewSettings(vm.minimumLockViews, vm.lockViewCount, !vm.separateLock, vm::updateMinimumLockViews)
+    if (vm.minimumLockViews > 0 && LockScreenViews.applies(source, vm.separateLock) && (!p.motion || inherited)) {
+        LiveWallpaperActivationPrompt(rememberLiveWallpaperActive(source, vm.separateLock), source, vm.separateLock, onActivateMotion)
     }
     if (inherited) {
         CardBlock {
@@ -49,4 +58,22 @@ import com.emduah.personal.data.Screen
         if (p.motion) LiveWallpaperActivationPrompt(rememberLiveWallpaperActive(source, vm.separateLock), source, vm.separateLock, onActivateMotion)
     }
     Text("Android may delay background updates while your phone is idle, low on battery, or waiting for your preferred network. Your current wallpaper stays in place if an update fails.", color = Muted, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable internal fun LockViewSettings(minimum: Int, views: Int, shared: Boolean, save: (Int) -> Unit) {
+    var draft by rememberSaveable(minimum) { mutableStateOf((if (minimum > 0) minimum else LockScreenViews.DEFAULT_MINIMUM).toString()) }
+    val value = draft.toIntOrNull()
+    CardBlock {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Wait until viewed", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Switch(minimum > 0, { save(if (it) LockScreenViews.DEFAULT_MINIMUM else 0) })
+        }
+        Text(if (shared) "Hold shared home and lock media until it has been shown on the lock screen enough times." else "Hold lock-screen media until it has been shown enough times.", color = Muted)
+        if (minimum > 0) {
+            OutlinedTextField(draft, { draft = it.filter(Char::isDigit).take(4) }, label = { Text("Minimum lock-screen views") }, supportingText = { Text("1–1000 · each awake lock-screen visit counts once") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedButton(onClick = { value?.let(save) }, enabled = value != null && value in 1..1000 && value != minimum, modifier = Modifier.fillMaxWidth()) { Text("Save minimum views") }
+            Text("Viewed $views of $minimum times · Manual Next skips this requirement and starts a new count.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text("Requires live wallpaper for images and videos. Previews and always-on display do not count.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }

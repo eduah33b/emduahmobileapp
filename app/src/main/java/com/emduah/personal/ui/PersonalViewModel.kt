@@ -19,6 +19,8 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     var profiles by mutableStateOf(Screen.entries.associateWith { store.profile(it) }); private set
     var current by mutableStateOf(Screen.entries.associateWith { store.current(it) }); private set
     var separateLock by mutableStateOf(store.separateLock()); private set
+    var minimumLockViews by mutableStateOf(store.minimumLockViews()); private set
+    var lockViewCount by mutableStateOf(store.lockViews(store.current(if (store.separateLock()) Screen.LOCK else Screen.HOME).file)); private set
     var options by mutableStateOf(JSONObject()); private set
     var devices by mutableStateOf(JSONObject()); private set
     var busy by mutableStateOf(false); private set
@@ -27,6 +29,8 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     init { store.prefs.registerOnSharedPreferenceChangeListener(this); if (connection.token.isNotBlank()) { loadOptions(); loadDevices() } }
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         separateLock = store.separateLock()
+        minimumLockViews = store.minimumLockViews()
+        lockViewCount = store.lockViews(store.current(if (separateLock) Screen.LOCK else Screen.HOME).file)
         connection = store.connection()
         profiles = Screen.entries.associateWith { store.profile(it) }
         current = Screen.entries.associateWith { store.current(it) }
@@ -119,8 +123,9 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     fun next(screen: Screen) {
         val p = store.profile(screen)
         if (!p.enabled) { notice = "Start rotation before requesting the next wallpaper."; return }
-        RotationScheduler.next(getApplication(), p)
+        RotationScheduler.next(getApplication(), p, manual = true)
         notice = "Next wallpaper queued. Network and battery preferences apply."
     }
+    fun updateMinimumLockViews(value: Int) { store.setMinimumLockViews(value) }
     override fun onCleared() { store.prefs.unregisterOnSharedPreferenceChangeListener(this) }
 }
