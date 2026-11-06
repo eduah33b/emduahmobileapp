@@ -1,22 +1,33 @@
 package com.emduah.personal.wallpaper
 
 import android.content.Context
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.work.*
 import com.emduah.personal.data.Profile
 import com.emduah.personal.data.Screen
 import java.util.concurrent.TimeUnit
 
 object RotationScheduler {
-    private fun constraints(p: Profile) = Constraints.Builder().setRequiredNetworkType(if (p.wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build()
-    fun schedule(context: Context, p: Profile) {
-        val manager = WorkManager.getInstance(context)
-        if (!p.enabled) { manager.cancelUniqueWork("rotation.${p.screen.key}"); return }
-        val request = PeriodicWorkRequestBuilder<RotationWorker>(p.minutes, TimeUnit.MINUTES)
+    internal fun constraints(p: Profile): Constraints = Constraints.Builder().apply {
+        if (p.wifiOnly) setRequiredNetworkRequest(
+            NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
+            NetworkType.CONNECTED
+        ) else setRequiredNetworkType(NetworkType.CONNECTED)
+        setRequiresBatteryNotLow(true)
+    }.build()
+    private fun request(p: Profile): PeriodicWorkRequest = PeriodicWorkRequestBuilder<RotationWorker>(p.minutes, TimeUnit.MINUTES)
             .setInitialDelay(p.minutes, TimeUnit.MINUTES)
             .setConstraints(constraints(p))
             .setInputData(workDataOf("screen" to p.screen.key))
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES).build()
-        manager.enqueueUniquePeriodicWork("rotation.${p.screen.key}", ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request)
+    fun schedule(context: Context, p: Profile) {
+        val manager = WorkManager.getInstance(context)
+        if (!p.enabled) { manager.cancelUniqueWork("rotation.${p.screen.key}"); return }
+        manager.enqueueUniquePeriodicWork("rotation.${p.screen.key}", ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request(p))
+    }
+    fun refreshConstraints(context: Context, p: Profile) {
+        if (p.enabled) WorkManager.getInstance(context).enqueueUniquePeriodicWork("rotation.${p.screen.key}", ExistingPeriodicWorkPolicy.UPDATE, request(p))
     }
     fun next(context: Context, p: Profile) {
         val request = OneTimeWorkRequestBuilder<RotationWorker>().setConstraints(constraints(p))

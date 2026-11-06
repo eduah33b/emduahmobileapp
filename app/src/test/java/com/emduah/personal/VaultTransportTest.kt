@@ -61,4 +61,15 @@ class VaultTransportTest {
         assertThrows(IllegalArgumentException::class.java) { api.next(Connection(base, "private-token"), profile, CurrentMedia()) }
     }
 
+    @Test fun blockedNetworkPreventsStartingAMediaDownload() = withServer { server, api ->
+        val file = File.createTempFile("vault-network", ".part")
+        try {
+            assertThrows(java.io.IOException::class.java) {
+                api.download(Selection(1, "wallpaper", "video", server.url("/storage").toString(), 0), file, 1024) { false }
+            }
+            assertEquals(0, server.requestCount)
+            assertEquals(0L, file.length())
+        } finally { file.delete() }
+    }
+
 }

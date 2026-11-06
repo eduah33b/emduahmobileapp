@@ -125,6 +125,7 @@ internal fun filterSummary(p: Profile): String = runCatching {
         DateFilter("Maximum date", j.optString("date_to")) { update("date_to", it) }
         Picker("Minimum rating", WallpaperFilters.minimumRating(j)?.toString().orEmpty(), listOf("" to "Any rating") + (1..5).map { it.toString() to "$it ${if (it == 1) "star" else "stars"} & above" }) { update("rating", it) }
         OutlinedTextField(j.optString("path"), { update("path", it) }, label = { Text("Path") }, supportingText = { Text("Search anywhere in path; prefix - to exclude…") }, modifier = Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("Wi-Fi only", modifier = Modifier.weight(1f)); Switch(wifi, { wifi = it }) }
     }
     OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) { Text(if (advanced) "Hide advanced filters" else "Advanced filters") }
     if (advanced) CardBlock {
@@ -148,7 +149,6 @@ internal fun filterSummary(p: Profile): String = runCatching {
         OutlinedTextField(minutes, { minutes = it.filter(Char::isDigit) }, label = { Text("Change every (minutes)") }, supportingText = { Text("Minimum 15 min · Android controls exact timing") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(maxMb, { maxMb = it.filter(Char::isDigit) }, label = { Text("Maximum download size (MB)") }, supportingText = { Text("1–1024 MB · larger files are excluded") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
         if (motion) OutlinedTextField(videoSeconds, { videoSeconds = it.filter(Char::isDigit) }, label = { Text("Video loop length (seconds)") }, supportingText = { Text("0 = full video · maximum 3600 seconds") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("Unmetered network only", modifier = Modifier.weight(1f)); Switch(wifi, { wifi = it }) }
     }
     if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
     Button(onClick = { save(p.enabled) }, modifier = Modifier.fillMaxWidth()) { Text("Save changes") }

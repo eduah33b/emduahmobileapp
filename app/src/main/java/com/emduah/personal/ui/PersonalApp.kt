@@ -17,6 +17,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.emduah.personal.wallpaper.RotationScheduler
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -28,6 +30,10 @@ import com.emduah.personal.data.Screen
 @Composable fun PersonalApp(vm: PersonalViewModel, onActivateMotion: () -> Unit) {
     EmduahTheme {
         val signedIn = vm.connection.token.isNotBlank()
+        val applicationContext = LocalContext.current.applicationContext
+        LaunchedEffect(signedIn, vm.profiles) {
+            if (signedIn) vm.profiles.values.forEach { RotationScheduler.refreshConstraints(applicationContext, it) }
+        }
         val snackbar = remember { SnackbarHostState() }
         LaunchedEffect(vm.notice) {
             if (vm.notice.isNotBlank()) {

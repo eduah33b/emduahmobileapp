@@ -25,6 +25,7 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
         if (!p.enabled || (screen == Screen.LOCK && !store.separateLock())) return Result.success()
         val connection = store.connection()
         if (connection.token.isBlank()) return Result.failure()
+        if (!RotationNetwork.allowed(applicationContext, p.wifiOnly)) return Result.retry()
         val old = store.current(screen)
         val directory = File(applicationContext.filesDir, "wallpapers").apply { mkdirs() }
         // One worker across both screens. Remove leftovers from interrupted downloads.
@@ -50,7 +51,17 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
             val selected = api.next(connection, p, old)
             require(p.motion || selected.type == "image") { "Image rotation received a video. Check the filters." }
             store.saveCurrent(screen, old.copy(message = "Downloading ${selected.name}…"))
-            api.download(selected, temp, p.maxDownloadMb.toLong() * 1024 * 1024)
+            if (!RotationNetwork.allowed(applicationContext, p.wifiOnly)) return Result.retry()
+            var lastNetworkCheck = 0L
+            var networkAllowed = true
+            api.download(selected, temp, p.maxDownloadMb.toLong() * 1024 * 1024) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (now - lastNetworkCheck >= 1000) {
+                    lastNetworkCheck = now
+                    networkAllowed = RotationNetwork.allowed(applicationContext, p.wifiOnly)
+                }
+                !isStopped && networkAllowed
+            }
             if (isStopped || store.profile(screen).revision != p.revision || (store.connection().sessionId != connection.sessionId || store.connection().baseUrl != connection.baseUrl)) return Result.success()
             val currentFile = File(directory, "${screen.key}-${UUID.randomUUID()}.media")
             val metrics = applicationContext.resources.displayMetrics
@@ -82,6 +93,7 @@ class RotationWorker(context: Context, params: WorkerParameters): CoroutineWorke
         } catch (e: Exception) {
             val message = if (e is ApiException && e.status == 401) "Session expired. Reconnect to MediaVault." else e.message ?: "Wallpaper update failed."
             store.saveCurrent(screen, store.current(screen).copy(message = message))
+            if (!RotationNetwork.allowed(applicationContext, p.wifiOnly)) return Result.retry()
             val transient = e is IOException && (e !is ApiException || e.status == 429 || e.status >= 500)
             return if (transient && runAttemptCount < 3) Result.retry() else Result.failure()
         } finally {

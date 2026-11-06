@@ -16,7 +16,9 @@ import com.emduah.personal.data.Screen
     val inherited = screen == Screen.LOCK && !vm.separateLock
     val source = if (inherited) Screen.HOME else screen
     val p = vm.profiles.getValue(source)
-    WallpaperPreview(vm.current.getValue(source), screen, p.videoSeconds)
+    val media = vm.current.getValue(source)
+    val timing = rememberRotationTiming(p, media.changedAt)
+    WallpaperPreview(media, screen, p.videoSeconds, timing)
     if (screen == Screen.LOCK) CardBlock {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -35,8 +37,8 @@ import com.emduah.personal.data.Screen
     } else CardBlock {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(if (p.enabled) "Rotation is on" else "Rotation is paused", style = MaterialTheme.typography.titleMedium)
-                Text("Every ${p.minutes} min · ${if (p.wifiOnly) "Unmetered network" else "Any network"}", style = MaterialTheme.typography.bodyMedium, color = Muted)
+                Text(if (timing.status.startsWith("Paused")) "Rotation is paused" else "Rotation is on", style = MaterialTheme.typography.titleMedium)
+                Text("Every ${p.minutes} min · ${if (p.wifiOnly) "Wi-Fi only" else "Any network"}", style = MaterialTheme.typography.bodyMedium, color = Muted)
             }
             Switch(p.enabled, { vm.save(p.copy(enabled = it)) })
         }

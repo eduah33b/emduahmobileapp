@@ -71,7 +71,8 @@ class VaultApi(private val store: VaultStore? = null, private val client: OkHttp
         return Selection(j.getLong("id"), j.getString("name"), j.getString("type"), j.getString("downloadUrl"), j.getInt("nextPosition"))
     }
     // The storage request is deliberately separate: never send the API token to R2.
-    fun download(selection: Selection, file: File, maxBytes: Long) {
+    fun download(selection: Selection, file: File, maxBytes: Long, shouldContinue: () -> Boolean = { true }) {
+        if (!shouldContinue()) throw IOException("Download paused by network requirements.")
         val url = selection.url.toHttpUrl()
         require(url.isHttps && url.username.isEmpty() && url.password.isEmpty()) { "The download must use HTTPS." }
         client.newCall(Request.Builder().url(url).build()).execute().use { response ->
@@ -82,6 +83,7 @@ class VaultApi(private val store: VaultStore? = null, private val client: OkHttp
                 val buffer = ByteArray(64 * 1024)
                 var total = 0L
                 while (true) {
+                    if (!shouldContinue()) throw IOException("Download paused by network requirements.")
                     val read = source.read(buffer)
                     if (read == -1) break
                     total += read
