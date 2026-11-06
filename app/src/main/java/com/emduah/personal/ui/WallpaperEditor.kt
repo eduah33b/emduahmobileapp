@@ -68,7 +68,7 @@ internal fun filterSummary(p: Profile): String = runCatching {
     }
 }
 
-@Composable internal fun ProfileEditor(p: Profile, options: JSONObject, onActivateMotion: () -> Unit, onSave: (Profile) -> Unit, onCancel: () -> Unit, onDirtyChange: (Boolean) -> Unit) {
+@Composable internal fun ProfileEditor(p: Profile, options: JSONObject, onActivateMotion: () -> Unit, onSave: (Profile) -> Unit, onCancel: () -> Unit, onDirtyChange: (Boolean) -> Unit, separateLock: Boolean = false) {
     var minutes by rememberSaveable(p.screen) { mutableStateOf(p.minutes.toString()) }
     var maxMb by rememberSaveable(p.screen) { mutableStateOf(p.maxDownloadMb.toString()) }
     var videoSeconds by rememberSaveable(p.screen) { mutableStateOf(p.videoSeconds.toString()) }
@@ -116,8 +116,7 @@ internal fun filterSummary(p: Profile): String = runCatching {
         Picker("Ordering", j.optString("sort", "random"), listOf("random" to "Stable shuffle · MediaVault order", "r2_modified_desc" to "Newest modified first", "r2_modified_asc" to "Oldest modified first", "rating_desc" to "Highest rated first", "path_asc" to "Path A–Z", "filename_asc" to "Filename A–Z", "filename_desc" to "Filename Z–A", "duration_asc" to "Shortest videos first", "duration_desc" to "Longest videos first", "relevance" to "Metadata relevance", "size_desc" to "Largest files first", "manual" to "Category manual order")) { update("sort", it) }
         Picker("Media type", j.optString("type"), listOf("image" to "Images", "video" to "Videos", "" to "Images & videos")) { update("type", it) }
         if (motion) {
-            Text("Videos use MediaVault motion. Apply it to both screens in Android’s wallpaper picker; each screen follows its own configured media.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-            OutlinedButton(onClick = onActivateMotion, modifier = Modifier.fillMaxWidth()) { Text("Open system wallpaper picker") }
+            LiveWallpaperActivationPrompt(rememberLiveWallpaperActive(p.screen, separateLock), p.screen, separateLock, onActivateMotion)
         }
         Text("Date range", fontSize = 16.sp)
         Text("Last modified · either date can be left open.", color = Muted, fontSize = 12.sp)

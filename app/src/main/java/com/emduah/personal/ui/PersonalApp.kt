@@ -106,7 +106,7 @@ import com.emduah.personal.data.Screen
                             AppPage.APPS -> AppsPage { location = location.open(AppPage.WALLPAPERS) }
                             AppPage.WALLPAPERS -> WallpaperPage(vm, screen, { screen = it }, onActivateMotion) { location = location.open(AppPage.EDITOR) }
                             AppPage.EDITOR -> ProfileEditor(vm.profiles.getValue(screen), vm.options, onActivateMotion,
-                                onSave = { if (vm.save(it)) leaveEditor() }, onCancel = ::back, onDirtyChange = { dirty = it })
+                                onSave = { if (vm.save(it)) leaveEditor() }, onCancel = ::back, onDirtyChange = { dirty = it }, separateLock = vm.separateLock)
                             AppPage.SETTINGS -> SettingsPage(vm)
                         }
                     }

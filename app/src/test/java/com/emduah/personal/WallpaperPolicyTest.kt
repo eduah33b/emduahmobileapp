@@ -50,4 +50,13 @@ class WallpaperPolicyTest {
         }
         assertEquals("https://mediavault.emduah.xyz", VaultApi.normalizeBase(" https://mediavault.emduah.xyz/ "))
     }
+    @Test fun activationIsRequiredOnlyForTheConfiguredScreens() {
+        assertFalse(WallpaperRouting.activeFor(Screen.HOME, false, true, false))
+        assertTrue(WallpaperRouting.activeFor(Screen.HOME, false, true, true))
+        assertTrue(WallpaperRouting.activeFor(Screen.HOME, true, true, false))
+        assertFalse(WallpaperRouting.activeFor(Screen.HOME, true, false, true))
+        assertTrue(WallpaperRouting.activeFor(Screen.LOCK, true, false, true))
+        assertFalse(WallpaperRouting.activeFor(Screen.LOCK, true, true, false))
+    }
+
 }

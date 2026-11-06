@@ -46,7 +46,7 @@ import com.emduah.personal.data.Screen
         // Stack the controls so larger system text remains readable.
         Button(onClick = { vm.next(screen) }, enabled = p.enabled, modifier = Modifier.fillMaxWidth()) { Text("Next wallpaper") }
         OutlinedButton(onClick = edit, modifier = Modifier.fillMaxWidth()) { Text("Configure") }
-        if (p.motion) OutlinedButton(onClick = onActivateMotion, modifier = Modifier.fillMaxWidth()) { Text("Open system wallpaper picker") }
+        if (p.motion) LiveWallpaperActivationPrompt(rememberLiveWallpaperActive(source, vm.separateLock), source, vm.separateLock, onActivateMotion)
     }
     Text("Android may delay background updates while your phone is idle, low on battery, or waiting for your preferred network. Your current wallpaper stays in place if an update fails.", color = Muted, style = MaterialTheme.typography.bodySmall)
 }
