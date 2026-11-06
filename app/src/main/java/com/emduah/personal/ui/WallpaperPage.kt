@@ -22,7 +22,8 @@ import com.emduah.personal.wallpaper.LockScreenViews
     val p = vm.profiles.getValue(source)
     val media = vm.current.getValue(source)
     val remainingViews = if (LockScreenViews.applies(source, vm.separateLock) && media.file.isNotBlank()) (vm.minimumLockViews - vm.lockViewCount).coerceAtLeast(0) else 0
-    val timing = rememberRotationTiming(p, media.changedAt, remainingViews)
+    val remainingHomeViews = if (source == Screen.HOME && media.file.isNotBlank()) (vm.minimumHomeViews - vm.homeViewCount).coerceAtLeast(0) else 0
+    val timing = rememberRotationTiming(p, media.changedAt, remainingViews, remainingHomeViews)
     WallpaperPreview(media, screen, p.videoSeconds, timing)
     if (screen == Screen.LOCK) CardBlock {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -33,8 +34,10 @@ import com.emduah.personal.wallpaper.LockScreenViews
             Switch(vm.separateLock, vm::setLockOverride)
         }
     }
-    if (screen == Screen.LOCK) LockViewSettings(vm.minimumLockViews, vm.lockViewCount, !vm.separateLock, vm::updateMinimumLockViews)
-    if (vm.minimumLockViews > 0 && LockScreenViews.applies(source, vm.separateLock) && (!p.motion || inherited)) {
+    if (screen == Screen.LOCK) MinimumViewSettings(screen, vm.minimumLockViews, vm.lockViewCount, !vm.separateLock, vm::updateMinimumLockViews)
+    else MinimumViewSettings(screen, vm.minimumHomeViews, vm.homeViewCount, !vm.separateLock, vm::updateMinimumHomeViews)
+    val requiresViews = (vm.minimumLockViews > 0 && LockScreenViews.applies(source, vm.separateLock)) || (source == Screen.HOME && vm.minimumHomeViews > 0)
+    if (requiresViews && (!p.motion || inherited)) {
         LiveWallpaperActivationPrompt(rememberLiveWallpaperActive(source, vm.separateLock), source, vm.separateLock, onActivateMotion)
     }
     if (inherited) {
@@ -60,20 +63,23 @@ import com.emduah.personal.wallpaper.LockScreenViews
     Text("Android may delay background updates while your phone is idle, low on battery, or waiting for your preferred network. Your current wallpaper stays in place if an update fails.", color = Muted, style = MaterialTheme.typography.bodySmall)
 }
 
-@Composable internal fun LockViewSettings(minimum: Int, views: Int, shared: Boolean, save: (Int) -> Unit) {
-    var draft by rememberSaveable(minimum) { mutableStateOf((if (minimum > 0) minimum else LockScreenViews.DEFAULT_MINIMUM).toString()) }
+@Composable internal fun MinimumViewSettings(screen: Screen, minimum: Int, views: Int, shared: Boolean, save: (Int) -> Unit) {
+    val destination = if (screen == Screen.HOME) "home screen" else "lock screen"
+    val fieldLabel = if (screen == Screen.HOME) "Minimum home-screen views" else "Minimum lock-screen views"
+    var draft by rememberSaveable(screen, minimum) { mutableStateOf((if (minimum > 0) minimum else LockScreenViews.DEFAULT_MINIMUM).toString()) }
     val value = draft.toIntOrNull()
     CardBlock {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Wait until viewed", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             Switch(minimum > 0, { save(if (it) LockScreenViews.DEFAULT_MINIMUM else 0) })
         }
-        Text(if (shared) "Hold shared home and lock media until it has been shown on the lock screen enough times." else "Hold lock-screen media until it has been shown enough times.", color = Muted)
+        Text(if (shared) "Hold shared media until both enabled view minimums are met." else "Hold $destination media until it has been shown enough times.", color = Muted)
         if (minimum > 0) {
-            OutlinedTextField(draft, { draft = it.filter(Char::isDigit).take(4) }, label = { Text("Minimum lock-screen views") }, supportingText = { Text("1–1000 · each awake lock-screen visit counts once") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(draft, { draft = it.filter(Char::isDigit).take(4) }, label = { Text(fieldLabel) }, supportingText = { Text("1–1000 · each awake $destination visit counts once") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = { value?.let(save) }, enabled = value != null && value in 1..1000 && value != minimum, modifier = Modifier.fillMaxWidth()) { Text("Save minimum views") }
             Text("Viewed $views of $minimum times · Manual Next skips this requirement and starts a new count.", color = Muted, style = MaterialTheme.typography.bodySmall)
             Text("Requires live wallpaper for images and videos. Previews and always-on display do not count.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (screen == Screen.HOME) Text("Returning from an app counts as a new visit. Remaining on the launcher does not add views.", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

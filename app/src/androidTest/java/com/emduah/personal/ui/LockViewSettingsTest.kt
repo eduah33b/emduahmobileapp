@@ -8,17 +8,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import com.emduah.personal.data.Screen
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 
 class LockViewSettingsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Test fun homeMinimumHasItsOwnLabelAndCanBeSaved() {
+        var minimum by mutableStateOf(3)
+        compose.setContent { EmduahTheme {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                MinimumViewSettings(Screen.HOME, minimum, 1, false) { minimum = it }
+            }
+        } }
+        compose.onNodeWithText("Minimum home-screen views").performTextReplacement("4")
+        compose.onNodeWithText("Save minimum views").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(4, minimum) }
+        compose.onNodeWithText("Viewed 1 of 4 times", substring = true).performScrollTo().assertIsDisplayed()
+    }
     @Test fun enablesValidatesSavesAndDisablesMinimumViews() {
         var minimum by mutableStateOf(0)
         compose.setContent { EmduahTheme {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                LockViewSettings(minimum, 0, true) { minimum = it }
+                MinimumViewSettings(Screen.LOCK, minimum, 0, true) { minimum = it }
             }
         } }
         compose.onNode(isToggleable()).performClick()

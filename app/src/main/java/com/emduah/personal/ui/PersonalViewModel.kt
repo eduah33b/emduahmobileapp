@@ -20,6 +20,8 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     var current by mutableStateOf(Screen.entries.associateWith { store.current(it) }); private set
     var separateLock by mutableStateOf(store.separateLock()); private set
     var minimumLockViews by mutableStateOf(store.minimumLockViews()); private set
+    var minimumHomeViews by mutableStateOf(store.minimumHomeViews()); private set
+    var homeViewCount by mutableStateOf(store.homeViews(store.current(Screen.HOME).file)); private set
     var lockViewCount by mutableStateOf(store.lockViews(store.current(if (store.separateLock()) Screen.LOCK else Screen.HOME).file)); private set
     var options by mutableStateOf(JSONObject()); private set
     var devices by mutableStateOf(JSONObject()); private set
@@ -30,6 +32,8 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         separateLock = store.separateLock()
         minimumLockViews = store.minimumLockViews()
+        minimumHomeViews = store.minimumHomeViews()
+        homeViewCount = store.homeViews(store.current(Screen.HOME).file)
         lockViewCount = store.lockViews(store.current(if (separateLock) Screen.LOCK else Screen.HOME).file)
         connection = store.connection()
         profiles = Screen.entries.associateWith { store.profile(it) }
@@ -127,5 +131,6 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
         notice = "Next wallpaper queued. Network and battery preferences apply."
     }
     fun updateMinimumLockViews(value: Int) { store.setMinimumLockViews(value) }
+    fun updateMinimumHomeViews(value: Int) { store.setMinimumHomeViews(value) }
     override fun onCleared() { store.prefs.unregisterOnSharedPreferenceChangeListener(this) }
 }

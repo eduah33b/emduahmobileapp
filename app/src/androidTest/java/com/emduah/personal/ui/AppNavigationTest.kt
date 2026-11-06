@@ -104,7 +104,7 @@ class AppNavigationTest {
         compose.onNodeWithText("draft-folder").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Discard", substring = false).performClick()
-        compose.onNodeWithText("A fresh view, at your pace.").assertIsDisplayed()
+        compose.onNodeWithText("Configure").assertIsDisplayed()
     }
     @Test fun configureFromPlayingVideoRendersAndRemainsEditable() {
         val file = File(context.cacheDir, "ui-test-preview.mp4")
@@ -129,7 +129,7 @@ class AppNavigationTest {
             compose.onNodeWithText("fixture -draft").assertIsDisplayed()
             compose.onNodeWithContentDescription("Back").performClick()
             compose.onNodeWithText("Discard", substring = false).performClick()
-            compose.onNodeWithText("A fresh view, at your pace.").assertIsDisplayed()
+            compose.onNodeWithText("Configure").assertIsDisplayed()
         } finally { file.delete() }
     }
 

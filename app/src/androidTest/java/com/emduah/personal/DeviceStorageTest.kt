@@ -15,6 +15,32 @@ import java.util.UUID
 @RunWith(AndroidJUnit4::class)
 class DeviceStorageTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun homeVisitsPersistDeduplicateAndResetIndependentlyFromLock() {
+        val name = "test-${UUID.randomUUID()}"
+        val store = VaultStore(context, name)
+        try {
+            assertEquals(3, store.minimumHomeViews())
+            store.setSeparateLock(true)
+            store.saveCurrent(Screen.HOME, CurrentMedia(id = 1, file = "home"))
+            store.saveCurrent(Screen.LOCK, CurrentMedia(id = 2, file = "lock"))
+            store.recordHomeView("home")
+            VaultStore(context, name).recordHomeView("home")
+            assertEquals(1, store.homeViews("home"))
+            assertEquals(0, store.lockViews("lock"))
+            store.endHomeVisit()
+            store.recordHomeView("home")
+            assertEquals(2, store.homeViews("home"))
+            store.recordLockView("lock")
+            store.saveCurrent(Screen.HOME, CurrentMedia(id = 1, file = "replacement"))
+            store.recordHomeView("home")
+            assertEquals(0, store.homeViews("replacement"))
+            assertEquals(1, store.lockViews("lock"))
+            store.setMinimumHomeViews(5)
+            assertEquals(5, VaultStore(context, name).minimumHomeViews())
+            store.setMinimumHomeViews(0)
+            assertEquals(0, VaultStore(context, name).minimumHomeViews())
+        } finally { context.deleteSharedPreferences(name) }
+    }
     @Test fun lockViewsPersistPerAppliedFileAndResetOnlyWhenMediaChanges() {
         val name = "test-${UUID.randomUUID()}"
         val store = VaultStore(context, name)

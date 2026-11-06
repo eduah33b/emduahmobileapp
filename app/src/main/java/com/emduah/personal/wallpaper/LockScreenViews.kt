@@ -10,10 +10,11 @@ object LockScreenViews {
         !preview && visible && interactive && locked && lockDestination
 }
 
-/** One exposure per lock-screen visit, shared across overlapping wallpaper engines. */
-internal class LockViewSessions {
+/** One exposure per screen visit, shared across overlapping wallpaper engines. */
+internal class ScreenViewSessions {
     private val engines = mutableSetOf<Any>()
     private val presented = mutableSetOf<String>()
+    val active: Boolean get() = engines.isNotEmpty()
     fun frame(engine: Any, eligible: Boolean, file: String): Boolean {
         if (!eligible) {
             engines.remove(engine)

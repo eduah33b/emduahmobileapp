@@ -29,7 +29,7 @@ class LockScreenViewsTest {
         assertFalse(LockScreenViews.eligible(false, true, true, true, false))
     }
     @Test fun framesAndOverlappingEnginesCountOnlyOncePerVisit() {
-        val sessions = LockViewSessions()
+        val sessions = ScreenViewSessions()
         assertTrue(sessions.frame("engine1", true, "a"))
         repeat(100) { assertFalse(sessions.frame("engine1", true, "a")) }
         assertFalse(sessions.frame("engine2", true, "a"))

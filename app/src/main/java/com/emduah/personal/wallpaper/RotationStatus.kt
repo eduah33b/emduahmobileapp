@@ -16,13 +16,14 @@ object RotationStatus {
         }
     }
 
-    fun nextUpdate(enabled: Boolean, wifiOnly: Boolean, environment: RotationEnvironment, work: RotationWork, now: Long, lockViewsRemaining: Int = 0): String {
+    fun nextUpdate(enabled: Boolean, wifiOnly: Boolean, environment: RotationEnvironment, work: RotationWork, now: Long, lockViewsRemaining: Int = 0, homeViewsRemaining: Int = 0): String {
         return when {
             !enabled -> "Paused"
             wifiOnly && !environment.wifi -> "Paused · waiting for Wi-Fi"
             !environment.internet -> "Paused · no internet"
             environment.batteryLow -> "Paused · low battery"
             work.running -> "Updating wallpaper…"
+            homeViewsRemaining > 0 -> "Paused · $homeViewsRemaining home ${if (homeViewsRemaining == 1) "view" else "views"} left"
             lockViewsRemaining > 0 -> "Paused · $lockViewsRemaining lock ${if (lockViewsRemaining == 1) "view" else "views"} left"
             !work.known -> "Checking schedule…"
             work.nextAt == null -> "No update scheduled"

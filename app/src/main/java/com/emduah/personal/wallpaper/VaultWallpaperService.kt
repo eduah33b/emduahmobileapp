@@ -17,7 +17,8 @@ import com.emduah.personal.data.VaultStore
 import java.io.File
 
 class VaultWallpaperService: WallpaperService() {
-    private val views = LockViewSessions()
+    private val views = ScreenViewSessions()
+    private val homeViews = ScreenViewSessions()
     override fun onCreateEngine(): Engine = VaultEngine()
     inner class VaultEngine: Engine(), SharedPreferences.OnSharedPreferenceChangeListener {
         private val store = VaultStore(this@VaultWallpaperService)
@@ -28,6 +29,10 @@ class VaultWallpaperService: WallpaperService() {
                 if (!isPreview && (intent?.action == Intent.ACTION_SCREEN_OFF || intent?.action == Intent.ACTION_USER_PRESENT)) {
                     store.endLockVisit()
                     views.frame(this@VaultEngine, false, "")
+                }
+                if (!isPreview && intent?.action == Intent.ACTION_SCREEN_OFF) {
+                    store.endHomeVisit()
+                    homeViews.frame(this@VaultEngine, false, "")
                 }
                 render(); handler.postDelayed({ if (isVisible) render() }, 200)
             }
@@ -54,6 +59,7 @@ class VaultWallpaperService: WallpaperService() {
             renderer?.close()
             renderer = WallpaperRenderer(holder.surface, onFramePresented = { file -> handler.post {
                 if (views.frame(this, viewEligible(), file)) store.recordLockView(file)
+                if (homeViews.frame(this, homeViewEligible(), file)) store.recordHomeView(file)
             } }) { message ->
                 handler.post {
                     val screen = selectedScreen()
@@ -67,7 +73,7 @@ class VaultWallpaperService: WallpaperService() {
         }
         override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) { super.onSurfaceChanged(holder, format, width, height); renderer?.resize(width, height); render() }
         override fun onVisibilityChanged(visible: Boolean) {
-            if (!visible) views.frame(this, false, "")
+            if (!visible) { views.frame(this, false, ""); endHomeExposure() }
             handler.removeCallbacks(tick)
             renderer?.setVisible(visible)
             if (visible) { render(); handler.post(tick) }
@@ -79,7 +85,9 @@ class VaultWallpaperService: WallpaperService() {
             // Persist visit deduplication across engine/service recreation. Only a definite
             // sleep or unlock ends the visit; hiding the surface alone must not add a view.
             if (!isPreview && !getSystemService(PowerManager::class.java).isInteractive) store.endLockVisit()
+            if (!isPreview && (!getSystemService(PowerManager::class.java).isInteractive || getSystemService(KeyguardManager::class.java).isKeyguardLocked)) store.endHomeVisit()
             if (!viewEligible()) views.frame(this, false, "")
+            if (!homeViewEligible()) endHomeExposure()
             val screen = selectedScreen()
             val current = store.current(screen)
             renderer?.load(File(current.file), current.type, store.profile(screen).videoSeconds, isVisible)
@@ -88,7 +96,16 @@ class VaultWallpaperService: WallpaperService() {
             isPreview, isVisible, getSystemService(PowerManager::class.java).isInteractive,
             getSystemService(KeyguardManager::class.java).isKeyguardLocked, wallpaperFlags and WallpaperManager.FLAG_LOCK != 0
         )
-        override fun onSurfaceDestroyed(holder: SurfaceHolder) { views.frame(this, false, ""); renderer?.close(); renderer = null; handler.removeCallbacks(tick); super.onSurfaceDestroyed(holder) }
-        override fun onDestroy() { views.frame(this, false, ""); store.prefs.unregisterOnSharedPreferenceChangeListener(this); unregisterReceiver(receiver); handler.removeCallbacksAndMessages(null); renderer?.close(); renderer = null; super.onDestroy() }
+        private fun homeViewEligible(): Boolean = HomeScreenViews.eligible(
+            isPreview, isVisible, getSystemService(PowerManager::class.java).isInteractive,
+            getSystemService(KeyguardManager::class.java).isKeyguardLocked, wallpaperFlags and WallpaperManager.FLAG_SYSTEM != 0 && selectedScreen() == Screen.HOME
+        )
+        private fun endHomeExposure() {
+            val active = homeViews.active
+            homeViews.frame(this, false, "")
+            if (active && !homeViews.active) store.endHomeVisit()
+        }
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) { views.frame(this, false, ""); homeViews.frame(this, false, ""); renderer?.close(); renderer = null; handler.removeCallbacks(tick); super.onSurfaceDestroyed(holder) }
+        override fun onDestroy() { views.frame(this, false, ""); homeViews.frame(this, false, ""); store.prefs.unregisterOnSharedPreferenceChangeListener(this); unregisterReceiver(receiver); handler.removeCallbacksAndMessages(null); renderer?.close(); renderer = null; super.onDestroy() }
     }
 }

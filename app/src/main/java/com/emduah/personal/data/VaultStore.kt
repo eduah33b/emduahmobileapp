@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.json.JSONObject
 import com.emduah.personal.wallpaper.LockScreenViews
+import com.emduah.personal.wallpaper.HomeScreenViews
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -44,6 +45,17 @@ class VaultStore(context: Context, name: String = "personal") {
     fun separateLock(): Boolean = prefs.getBoolean("separateLock", false)
     fun setSeparateLock(value: Boolean) { prefs.edit().putBoolean("separateLock", value).commit() }
     fun minimumLockViews(): Int = prefs.getInt("minimumLockViews", LockScreenViews.DEFAULT_MINIMUM)
+    fun minimumHomeViews(): Int = prefs.getInt("minimumHomeViews", HomeScreenViews.DEFAULT_MINIMUM)
+    fun setMinimumHomeViews(value: Int) {
+        require(value in 0..1000) { "Choose between 1 and 1000 views." }
+        prefs.edit().putInt("minimumHomeViews", value).commit()
+    }
+    fun homeViews(file: String): Int = if (file.isNotBlank() && prefs.getString("homeViewedFile", "") == file) prefs.getInt("homeViewCount", 0) else 0
+    fun endHomeVisit() { if (prefs.contains("homeVisitFile")) prefs.edit().remove("homeVisitFile").commit() }
+    fun recordHomeView(file: String) {
+        if (file.isBlank() || current(Screen.HOME).file != file || prefs.getString("homeVisitFile", "") == file) return
+        prefs.edit().putString("homeViewedFile", file).putString("homeVisitFile", file).putInt("homeViewCount", (homeViews(file) + 1).coerceAtMost(1000)).commit()
+    }
     fun setMinimumLockViews(value: Int) {
         require(value in 0..1000) { "Choose between 1 and 1000 views." }
         prefs.edit().putInt("minimumLockViews", value).commit()
