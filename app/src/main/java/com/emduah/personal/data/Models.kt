@@ -20,10 +20,13 @@ data class Profile(
         require(videoSeconds in 0..3600) { "Video loop length must be 0 (full video) or up to 3600 seconds." }
         val json = JSONObject(filters)
         require(!json.has("trash") || !json.optBoolean("trash")) { "Trashed media cannot be used as wallpaper." }
-        require(!motion || json.optString("type") != "image") { "Choose videos or mixed media for motion mode." }
+        WallpaperFilters.validateDates(json)
+        WallpaperFilters.minimumRating(json)
+        require(json.optString("type") in listOf("", "image", "video")) { "Choose images, videos, or both." }
         return this
     }
     fun requestFilters(): JSONObject = JSONObject(filters).apply {
+        WallpaperFilters.setMinimumRating(this, WallpaperFilters.minimumRating(this))
         if (!motion) put("type", "image")
         if (optString("seed").isBlank()) put("seed", "mediavault")
         put("trash", false)
