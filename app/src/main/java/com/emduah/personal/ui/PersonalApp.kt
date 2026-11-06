@@ -89,7 +89,8 @@ private val palette = darkColorScheme(primary = Lime, onPrimary = Ink, backgroun
                     } else if (editing) {
                         ProfileEditor(p, vm.options, onActivateMotion, onSave = { if (vm.save(it)) editing = false }, onCancel = { editing = false })
                     } else {
-                        WallpaperPreview(vm.current.getValue(if (screen == Screen.LOCK && !vm.separateLock) Screen.HOME else screen), screen)
+                        val previewScreen = if (screen == Screen.LOCK && !vm.separateLock) Screen.HOME else screen
+                        WallpaperPreview(vm.current.getValue(previewScreen), screen, vm.profiles.getValue(previewScreen).videoSeconds)
                         if (screen == Screen.LOCK && !vm.separateLock) {
                             CardBlock {
                                 Text("Following your home screen", fontSize = 19.sp)
@@ -125,21 +126,31 @@ private val palette = darkColorScheme(primary = Lime, onPrimary = Ink, backgroun
     Surface(shape = RoundedCornerShape(22.dp), color = Panel) { Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content) }
 }
 
-@Composable private fun WallpaperPreview(media: CurrentMedia, screen: Screen) {
+@Composable private fun WallpaperPreview(media: CurrentMedia, screen: Screen, videoSeconds: Int) {
+    var playing by remember(media.file, screen) { mutableStateOf(true) }
+    var playbackError by remember(media.file, screen) { mutableStateOf<String?>(null) }
+    val hasVideo = media.type == "video" && File(media.file).isFile
     val bitmap by produceState<android.graphics.Bitmap?>(null, media.file) {
         value = withContext(Dispatchers.IO) { runCatching { if (media.type == "image" && File(media.file).isFile) WallpaperImages.decode(File(media.file), 500, 700) else null }.getOrNull() }
     }
     Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(Color(0xFF3E5843), Color(0xFF1D3329), Color(0xFF607459))))) {
         bitmap?.let { Image(it.asImageBitmap(), contentDescription = media.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        if (hasVideo) key(media.file, screen) {
+            VideoPreview(File(media.file), videoSeconds, playing && playbackError == null, Modifier.fillMaxSize()) { playbackError = it }
+        }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .8f)))))
         Column(Modifier.align(Alignment.TopStart).padding(22.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(if (screen == Screen.HOME) "YOUR HOME, REIMAGINED" else "JUST FOR YOUR LOCK SCREEN", color = Color.White.copy(alpha = .8f), fontSize = 10.sp, letterSpacing = 1.8.sp)
+            Text(if (hasVideo) "VIDEO · MUTED" else if (screen == Screen.HOME) "YOUR HOME, REIMAGINED" else "JUST FOR YOUR LOCK SCREEN", color = Color.White.copy(alpha = .8f), fontSize = 10.sp, letterSpacing = 1.8.sp)
             if (media.id == 0L) Text("Space for something\nbeautiful.", fontSize = 30.sp, lineHeight = 35.sp, color = Color.White, fontWeight = FontWeight.Light)
-            else if (media.type == "video") Text("▶  In motion", color = Color.White, fontSize = 24.sp)
         }
+        if (hasVideo && playbackError == null) TextButton(
+            onClick = { playing = !playing },
+            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+        ) { Text(if (playing) "Pause preview" else "Play preview") }
         Column(Modifier.align(Alignment.BottomStart).padding(22.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(media.name.ifBlank { "No wallpaper downloaded yet" }, color = Color.White, fontWeight = FontWeight.Medium, maxLines = 2)
-            Text(media.message, color = Color(0xFFD8E6D8), fontSize = 12.sp, maxLines = 3)
+            Text(playbackError?.let { "Preview unavailable: $it" } ?: media.message, color = Color(0xFFD8E6D8), fontSize = 12.sp, maxLines = 3)
             if (media.changedAt > 0) Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(media.changedAt)), color = Muted, fontSize = 11.sp)
         }
     }
