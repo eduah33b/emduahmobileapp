@@ -23,6 +23,7 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
     var devices by mutableStateOf(JSONObject()); private set
     var busy by mutableStateOf(false); private set
     var notice by mutableStateOf(""); private set
+    var signInError by mutableStateOf(""); private set
     init { store.prefs.registerOnSharedPreferenceChangeListener(this); if (connection.token.isNotBlank()) { loadOptions(); loadDevices() } }
     override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
         separateLock = store.separateLock()
@@ -30,16 +31,17 @@ class PersonalViewModel(application: Application): AndroidViewModel(application)
         profiles = Screen.entries.associateWith { store.profile(it) }
         current = Screen.entries.associateWith { store.current(it) }
     }
+    fun clearNotice() { notice = "" }
     fun login(base: String, email: String, password: String, done: () -> Unit) {
         viewModelScope.launch {
-            busy = true; notice = ""
+            busy = true; notice = ""; signInError = ""
             try {
                 val result = withContext(Dispatchers.IO) { VaultApi(store).login(base, email, password) }
                 store.saveConnection(result)
                 loadOptions(); loadDevices()
                 notice = "Connected to MediaVault"
                 done()
-            } catch (e: Exception) { notice = e.message ?: "Unable to connect." } finally { busy = false }
+            } catch (e: Exception) { signInError = e.message ?: "Unable to sign in." } finally { busy = false }
         }
     }
     fun loadDevices() {

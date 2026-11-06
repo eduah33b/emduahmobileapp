@@ -1,0 +1,6 @@
+<resources>
+    <color name="launcher_background">#18181B</color>
+    <color name="launch_background">#F3F1EC</color>
+    <color name="system_background">#FAFAFA</color>
+    <color name="control_accent">#18181B</color>
+</resources>

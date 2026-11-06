@@ -1,0 +1,5 @@
+<resources>
+    <color name="launch_background">#151515</color>
+    <color name="system_background">#09090B</color>
+    <color name="control_accent">#FAFAFA</color>
+</resources>
